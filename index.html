@@ -140,7 +140,7 @@
   <div class="card">
     <div class="row">
       <label for="deposit">Deposit $</label>
-      <input type="number" id="deposit" value="644.06" step="0.01" min="0" style="width:120px;">
+      <input type="number" id="deposit" value="0" step="0.01" min="0" style="width:120px;">
       <button id="importBtn">Import CSV</button>
       <input type="file" id="csvFile" accept=".csv" style="display:none;">
       <span class="last-saved" id="lastSaved"></span>
@@ -282,23 +282,13 @@ const STORAGE_KEY = 'portfolio_allocator_v2';
 const SAMPLE = {
   accounts: {
     'Roth IRA': [
-      {sym:'FXAIX', val:825.65, target:22.0, price:259.15, targetPrice:''},
-      {sym:'NVDA',  val:696.72, target:18.0, price:199.07, targetPrice:298.42},
-      {sym:'FSELX', val:510.83, target:15.0, price:69.05,  targetPrice:''},
-      {sym:'MSFT',  val:360.48, target:14.0, price:370.87, targetPrice:561.39},
-      {sym:'CEG',   val:250.76, target:9.0,  price:250.77, targetPrice:380.60},
-      {sym:'KVYO',  val:102.40, target:6.0,  price:15.12,  targetPrice:29.23},
-      {sym:'ALB',   val:90.03,  target:6.0,  price:135.39, targetPrice:212.74},
-      {sym:'FOCPX', val:54.92,  target:4.0,  price:30.41,  targetPrice:''},
-      {sym:'FNARX', val:45.35,  target:3.0,  price:59.37,  targetPrice:''},
-      {sym:'AMRX',  val:37.25,  target:2.0,  price:17.36,  targetPrice:17.17},
-      {sym:'ONDS',  val:28.90,  target:1.0,  price:8.27,   targetPrice:20.13}
+      {sym:'FXAIX', val:0, target:0, price:'', targetPrice:''}
     ]
   }
 };
 
 let state = {
-  deposit: 644.06,
+  deposit: 0,
   mode: 'current',
   tilt: 50,
   priceStrength: 60,
