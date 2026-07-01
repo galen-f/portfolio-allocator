@@ -1,0 +1,938 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Portfolio allocator</title>
+<style>
+  :root {
+    --surface-0: #f7f6f3;
+    --surface-1: #ffffff;
+    --surface-2: #ffffff;
+    --text-primary: #1a1a18;
+    --text-secondary: #6b6a64;
+    --text-muted: #97958d;
+    --border: #e3e1d9;
+    --border-strong: #c9c7bc;
+    --accent: #185fa5;
+    --accent-bg: #e6f1fb;
+    --accent-text: #185fa5;
+    --danger: #a32d2d;
+    --danger-bg: #fcebeb;
+    --success: #3b6d11;
+    --success-bg: #eaf3de;
+    --warning: #854f0b;
+    --warning-bg: #faeeda;
+    --radius: 8px;
+    --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --surface-0: #1c1c1a;
+      --surface-1: #242422;
+      --surface-2: #2c2c29;
+      --text-primary: #ededea;
+      --text-secondary: #b0afa8;
+      --text-muted: #807e76;
+      --border: #38362f;
+      --border-strong: #4a4840;
+      --accent: #6ab0f3;
+      --accent-bg: #0c2538;
+      --accent-text: #6ab0f3;
+      --danger: #f09595;
+      --danger-bg: #2e1414;
+      --success: #97c459;
+      --success-bg: #1c2a0e;
+      --warning: #fac775;
+      --warning-bg: #2a1e06;
+    }
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--surface-0); color: var(--text-primary); font-family: var(--font); font-size: 14px; line-height: 1.5; padding: 1.5rem 1rem 4rem; }
+  .wrap { max-width: 980px; margin: 0 auto; }
+
+  h1 { font-size: 19px; font-weight: 600; margin-bottom: 2px; }
+  .subtitle { color: var(--text-secondary); font-size: 12px; margin-bottom: 1.25rem; }
+
+  .card { background: var(--surface-1); border: 1px solid var(--border); border-radius: 12px; padding: 1.1rem 1.25rem; margin-bottom: 0.75rem; }
+
+  .row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  label { font-size: 12px; color: var(--text-secondary); }
+
+  input[type="number"], input[type="text"], select {
+    background: var(--surface-2); border: 1px solid var(--border-strong); border-radius: 6px;
+    padding: 4px 7px; font-size: 13px; color: var(--text-primary); font-family: inherit; height: 30px;
+  }
+  input:focus, select:focus, button:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-bg); }
+
+  button {
+    background: var(--surface-2); border: 1px solid var(--border-strong); border-radius: 6px;
+    padding: 4px 11px; font-size: 12px; color: var(--text-primary); cursor: pointer; height: 30px; font-family: inherit;
+  }
+  button:hover { background: var(--surface-0); }
+  button:active { transform: scale(0.98); }
+  button.accent { background: var(--accent); color: #fff; border-color: var(--accent); }
+  button.accent:hover { opacity: 0.88; }
+  button.ghost { border-color: transparent; background: transparent; }
+  button.ghost:hover { background: var(--surface-0); }
+  button.danger-text { color: var(--danger); }
+
+  .tabs { display: flex; gap: 5px; }
+  .tabs button { flex: 1; font-size: 12px; }
+  .tabs button.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+  .slider-row { display: flex; align-items: center; gap: 10px; margin-top: 0.6rem; }
+  .slider-row label { white-space: nowrap; min-width: 120px; }
+  input[type="range"] { flex: 1; height: 30px; accent-color: var(--accent); }
+  .slider-val { font-size: 12px; font-weight: 600; min-width: 36px; text-align: right; color: var(--text-primary); }
+  .help { font-size: 11px; color: var(--text-muted); margin-top: 3px; }
+
+  .sell-row { display: flex; align-items: center; gap: 8px; margin-top: 0.7rem; padding-top: 0.7rem; border-top: 1px solid var(--border); }
+  .sell-row label { font-size: 12px; color: var(--text-primary); cursor: pointer; }
+  input[type="checkbox"] { width: 15px; height: 15px; cursor: pointer; accent-color: var(--accent); }
+
+  .account-tabs { display: flex; gap: 5px; margin-bottom: 0.75rem; flex-wrap: wrap; }
+  .account-tabs button { font-size: 12px; }
+  .account-tabs button.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+  .section-label { font-size: 12px; font-weight: 600; color: var(--text-secondary); margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.04em; }
+
+  .table-scroll { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  th { text-align: left; padding: 5px 5px; font-weight: 600; color: var(--text-secondary); border-bottom: 1px solid var(--border-strong); white-space: nowrap; font-size: 11px; }
+  th.r, td.r { text-align: right; }
+  td { padding: 3px 5px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+  td input { height: 26px; font-size: 12px; padding: 3px 5px; width: 100%; }
+  td input.sym { font-weight: 600; text-transform: uppercase; }
+  td input.r { text-align: right; }
+
+  .action-cell { font-weight: 700; font-size: 13px; white-space: nowrap; }
+  .buy-val { color: var(--success); }
+  .sell-val { color: var(--danger); }
+  .zero-val { color: var(--text-muted); }
+  .badge { display: inline-block; padding: 1px 5px; border-radius: 9px; font-size: 10px; font-weight: 600; margin-left: 3px; }
+  .badge.up { background: var(--success-bg); color: var(--success); }
+  .badge.down { background: var(--danger-bg); color: var(--danger); }
+  .badge.warn { background: var(--warning-bg); color: var(--warning); }
+
+  .table-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 8px; gap: 8px; flex-wrap: wrap; }
+
+  .summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 8px; margin-top: 0.75rem; }
+  .scard { background: var(--surface-0); border-radius: 8px; padding: 9px 12px; }
+  .scard .slabel { font-size: 10px; color: var(--text-secondary); margin-bottom: 2px; text-transform: uppercase; letter-spacing: 0.03em; }
+  .scard .sval { font-size: 17px; font-weight: 700; }
+  .scard .sval.buy { color: var(--success); }
+  .scard .sval.sell { color: var(--danger); }
+
+  .footer-note { font-size: 11px; color: var(--text-muted); margin-top: 1rem; }
+  .last-saved { font-size: 11px; color: var(--text-muted); margin-left: auto; }
+
+  .copy-btn { font-size: 11px; padding: 3px 8px; height: 26px; }
+  .copy-list { display: none; background: var(--surface-0); border: 1px solid var(--border); border-radius: 8px; padding: 0.75rem; margin-top: 0.5rem; font-size: 12px; white-space: pre; font-family: monospace; color: var(--text-primary); line-height: 1.8; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Portfolio allocator</h1>
+  <p class="subtitle">Allocate deposits (and optionally rebalance) across positions. Saved to this browser.</p>
+
+  <!-- Controls card -->
+  <div class="card">
+    <div class="row">
+      <label for="deposit">Deposit $</label>
+      <input type="number" id="deposit" value="644.06" step="0.01" min="0" style="width:120px;">
+      <button id="importBtn">Import CSV</button>
+      <input type="file" id="csvFile" accept=".csv" style="display:none;">
+      <span class="last-saved" id="lastSaved"></span>
+    </div>
+
+    <div style="margin-top:0.75rem;">
+      <div class="tabs" id="modeTabs">
+        <button data-mode="current" class="active">Current weights</button>
+        <button data-mode="target">Target weights</button>
+        <button data-mode="price">Target prices</button>
+        <button data-mode="smart">Smart</button>
+      </div>
+    </div>
+
+    <div id="tiltSection" style="display:none;">
+      <div class="slider-row">
+        <label for="tilt">Tilt toward target</label>
+        <input type="range" id="tilt" min="0" max="100" value="50" step="5">
+        <span class="slider-val" id="tiltVal">50%</span>
+      </div>
+      <p class="help">0% = maintain current proportions exactly. 100% = allocate entirely by target weights. Blend in between.</p>
+    </div>
+
+    <div id="priceSection" style="display:none;">
+      <div class="slider-row">
+        <label for="priceStrength">Price sensitivity</label>
+        <input type="range" id="priceStrength" min="0" max="100" value="60" step="5">
+        <span class="slider-val" id="priceStrengthVal">60%</span>
+      </div>
+      <p class="help">Shifts allocation away from positions at/above target price, toward those with more upside room.</p>
+    </div>
+
+    <div id="smartSection" style="display:none;">
+      <div class="slider-row">
+        <label for="smartPriceWeight">Price signal strength</label>
+        <input type="range" id="smartPriceWeight" min="0" max="100" value="50" step="5">
+        <span class="slider-val" id="smartPriceWeightVal">50%</span>
+      </div>
+      <p class="help">Blends two urgency signals per position: how far it is from its target weight, and how much upside/downside remains to its target price. Higher = price gap matters more relative to weight gap. Positions with no target price use weight gap only.</p>
+      <div class="slider-row" style="margin-top:0.4rem;">
+        <label for="smartConvexity">Urgency curve</label>
+        <input type="range" id="smartConvexity" min="1" max="4" value="2" step="0.5">
+        <span class="slider-val" id="smartConvexityVal">2×</span>
+      </div>
+      <p class="help">1× = linear (all gaps treated equally). Higher values make the algorithm increasingly aggressive about the most off-target positions — large gaps get disproportionately more capital, small gaps get less.</p>
+      <div class="slider-row" style="margin-top:0.4rem;">
+        <label for="smartNoTargetMult">No-target multiplier</label>
+        <input type="range" id="smartNoTargetMult" min="0" max="150" value="60" step="5">
+        <span class="slider-val" id="smartNoTargetMultVal">0.6×</span>
+      </div>
+      <p class="help">Scales the weight-gap signal for positions with no target price (typically broad ETFs/mutual funds). Below 1× = slightly deprioritised vs priced positions. Above 1× = treated as higher-conviction buys regardless of price signals.</p>
+    </div>
+
+    <!-- Sell controls -->
+    <div class="sell-row">
+      <input type="checkbox" id="allowSells">
+      <label for="allowSells">Allow sells to meet targets</label>
+    </div>
+    <div id="sellControls" style="display:none; margin-top:0.5rem;">
+      <div class="slider-row">
+        <label for="sellCap">Max sell per position</label>
+        <input type="range" id="sellCap" min="5" max="100" value="25" step="5">
+        <span class="slider-val" id="sellCapVal">25%</span>
+      </div>
+      <p class="help">Base cap on how much of any single position can be sold in one go. Positions trading above their target price can be sold more aggressively — up to the full cap — proportional to how far above target they are.</p>
+    </div>
+  </div>
+
+  <!-- Positions card -->
+  <div class="card">
+    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:0.5rem; flex-wrap:wrap; gap:6px;">
+      <div class="account-tabs" id="accountTabs" style="margin:0;"></div>
+      <button id="addAccount" style="font-size:11px; height:26px; padding:2px 8px;">+ Account</button>
+    </div>
+
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th style="min-width:70px;">Symbol</th>
+            <th class="r" style="min-width:90px;">Current value</th>
+            <th class="r" style="min-width:52px;">Weight</th>
+            <th class="r target-col" style="min-width:62px; display:none;">Target %</th>
+            <th class="r price-col" style="min-width:72px; display:none;">Price</th>
+            <th class="r price-col" style="min-width:80px; display:none;">Target price</th>
+            <th class="r smart-col" style="min-width:62px; display:none;">Target %</th>
+            <th class="r smart-col" style="min-width:72px; display:none;">Price</th>
+            <th class="r smart-col" style="min-width:80px; display:none;">Target price</th>
+            <th class="r smart-col" style="min-width:58px; display:none;">Urgency</th>
+            <th class="r" style="min-width:80px;">Action</th>
+            <th style="width:28px;"></th>
+          </tr>
+        </thead>
+        <tbody id="rows"></tbody>
+        <tfoot id="targetTfoot" style="display:none;">
+          <tr style="border-top: 1px solid var(--border-strong);">
+            <td colspan="3" style="padding:5px 5px; font-size:11px; color:var(--text-muted);">Target total</td>
+            <td class="r target-col smart-col" id="targetPctTotal" style="padding:5px 5px; font-weight:700; font-size:13px; white-space:nowrap;"></td>
+            <td class="r price-col smart-col" style="display:none;"></td>
+            <td class="r price-col smart-col" style="display:none;"></td>
+            <td class="r smart-col" style="display:none;"></td>
+            <td colspan="2"></td>
+          </tr>
+          <tr id="upsideTfootRow" style="display:none;">
+            <td colspan="3" style="padding:3px 5px 6px; font-size:11px; color:var(--text-muted);">Wtd. portfolio upside</td>
+            <td class="r target-col smart-col" style="padding:3px 5px 6px; display:none;"></td>
+            <td class="r price-col smart-col" style="padding:3px 5px 6px; display:none;"></td>
+            <td class="r price-col smart-col" id="upsideTotal" style="padding:3px 5px 6px; font-weight:700; font-size:13px; white-space:nowrap;"></td>
+            <td class="r smart-col" id="upsideTotalSmart" style="padding:3px 5px 6px; display:none; font-weight:700; font-size:13px; white-space:nowrap;"></td>
+            <td colspan="2"></td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+
+    <div class="table-footer">
+      <button id="addRow" style="font-size:12px;">+ Position</button>
+      <div style="display:flex; gap:6px; align-items:center;">
+        <button class="copy-btn" id="copyList">Copy buy/sell list</button>
+        <button id="resetData" class="danger-text" style="font-size:12px;">Reset</button>
+      </div>
+    </div>
+    <div class="copy-list" id="copyListEl"></div>
+  </div>
+
+  <div class="summary-grid">
+    <div class="scard"><div class="slabel">Portfolio value</div><div class="sval" id="sumTotal">$0.00</div></div>
+    <div class="scard"><div class="slabel">Total to buy</div><div class="sval buy" id="sumBuy">$0.00</div></div>
+    <div class="scard"><div class="slabel">Total to sell</div><div class="sval sell" id="sumSell">$0.00</div></div>
+    <div class="scard"><div class="slabel">Net cash used</div><div class="sval" id="sumNet">$0.00</div></div>
+  </div>
+
+  <p class="footer-note">All data stored locally in this browser only — nothing is sent anywhere. Re-import your Fidelity CSV each deposit period to refresh current values; target weights and target prices are preserved across imports.</p>
+</div>
+
+<script>
+const STORAGE_KEY = 'portfolio_allocator_v2';
+
+const SAMPLE = {
+  accounts: {
+    'Roth IRA': [
+      {sym:'FXAIX', val:825.65, target:22.0, price:259.15, targetPrice:''},
+      {sym:'NVDA',  val:696.72, target:18.0, price:199.07, targetPrice:298.42},
+      {sym:'FSELX', val:510.83, target:15.0, price:69.05,  targetPrice:''},
+      {sym:'MSFT',  val:360.48, target:14.0, price:370.87, targetPrice:561.39},
+      {sym:'CEG',   val:250.76, target:9.0,  price:250.77, targetPrice:380.60},
+      {sym:'KVYO',  val:102.40, target:6.0,  price:15.12,  targetPrice:29.23},
+      {sym:'ALB',   val:90.03,  target:6.0,  price:135.39, targetPrice:212.74},
+      {sym:'FOCPX', val:54.92,  target:4.0,  price:30.41,  targetPrice:''},
+      {sym:'FNARX', val:45.35,  target:3.0,  price:59.37,  targetPrice:''},
+      {sym:'AMRX',  val:37.25,  target:2.0,  price:17.36,  targetPrice:17.17},
+      {sym:'ONDS',  val:28.90,  target:1.0,  price:8.27,   targetPrice:20.13}
+    ]
+  }
+};
+
+let state = {
+  deposit: 644.06,
+  mode: 'current',
+  tilt: 50,
+  priceStrength: 60,
+  allowSells: false,
+  sellCap: 25,
+  smartPriceWeight: 50,
+  smartConvexity: 2,
+  smartNoTargetMult: 0.6,
+  activeAccount: 'Roth IRA',
+  accounts: JSON.parse(JSON.stringify(SAMPLE.accounts))
+};
+
+function loadState() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) {
+      const p = JSON.parse(raw);
+      Object.assign(state, p);
+      if (!state.accounts || !Object.keys(state.accounts).length)
+        state.accounts = JSON.parse(JSON.stringify(SAMPLE.accounts));
+      if (!state.activeAccount || !state.accounts[state.activeAccount])
+        state.activeAccount = Object.keys(state.accounts)[0];
+    }
+  } catch(e) {}
+}
+
+function saveState() {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    const el = document.getElementById('lastSaved');
+    if (el) el.textContent = 'Saved ' + new Date().toLocaleTimeString();
+  } catch(e) {}
+}
+
+function fmt(n, forceSign) {
+  if (isNaN(n) || n === null) n = 0;
+  const s = '$' + Math.abs(n).toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2});
+  if (forceSign) return (n < 0 ? '−' : '+') + s;
+  return (n < 0 ? '−' : '') + s;
+}
+function pct(n) {
+  if (isNaN(n)) n = 0;
+  return n.toFixed(1) + '%';
+}
+
+function positions() { return state.accounts[state.activeAccount] || []; }
+
+// ── Core allocation engine ──────────────────────────────────────────────────
+function computeAllocations() {
+  const pos = positions();
+  const deposit = parseFloat(state.deposit) || 0;
+  const n = pos.length;
+  if (!n) return { totalVal:0, weights:[], currentWeights:[], actions:[], smartScores:null };
+
+  const vals = pos.map(p => parseFloat(p.val) || 0);
+  const totalVal = vals.reduce((s,v)=>s+v, 0);
+
+  // Step 1: base weights from current values — preserve these for display, never mutate
+  const currentWeights = vals.map(v => totalVal > 0 ? v/totalVal : (n > 0 ? 1/n : 0));
+  let weights = currentWeights.slice(); // allocation weights, mutated by mode below
+
+  // Step 2: apply mode adjustments
+  if (state.mode === 'target') {
+    const tilt = (parseFloat(state.tilt)||0) / 100;
+    if (!state.allowSells) {
+      // blend current → target
+      const tSum = pos.reduce((s,p)=>s+(parseFloat(p.target)||0), 0);
+      const tW = pos.map(p => tSum > 0 ? (parseFloat(p.target)||0)/tSum : 0);
+      weights = weights.map((w,i)=> w*(1-tilt) + tW[i]*tilt);
+      const ws = weights.reduce((s,w)=>s+w,0);
+      if (ws > 0) weights = weights.map(w=>w/ws);
+    }
+    // sells handled below
+  }
+
+  if (state.mode === 'price') {
+    const str = (parseFloat(state.priceStrength)||0) / 100;
+    const factors = pos.map(p => {
+      const pr = parseFloat(p.price), tp = parseFloat(p.targetPrice);
+      if (!tp || !pr || tp<=0 || pr<=0) return 1;
+      const upside = (tp - pr) / pr;
+      return Math.max(0.05, 1 + Math.max(-0.5, Math.min(1, upside)) * str);
+    });
+    weights = weights.map((w,i)=>w*factors[i]);
+    const ws = weights.reduce((s,w)=>s+w,0);
+    if (ws > 0) weights = weights.map(w=>w/ws);
+  }
+
+  // Smart mode: combined weight-gap × price-gap urgency scores
+  let smartScores = null;
+  if (state.mode === 'smart') {
+    const priceWeight = (parseFloat(state.smartPriceWeight)||50) / 100;
+    const convexity   = parseFloat(state.smartConvexity) || 2;
+    const totalVal2   = vals.reduce((s,v)=>s+v, 0);
+    const tSum = pos.reduce((s,p)=>s+(parseFloat(p.target)||0), 0);
+    const targetW = pos.map(p => tSum > 0 ? (parseFloat(p.target)||0)/tSum : 1/n);
+    const curW    = vals.map(v => totalVal2 > 0 ? v/totalVal2 : 1/n);
+
+    // Weight gap signal: (target% - current%) normalised to [-1, +1] by dividing by max observed gap
+    const rawWGaps = pos.map((_,i) => targetW[i] - curW[i]);
+    const maxAbsWGap = Math.max(...rawWGaps.map(Math.abs), 0.0001);
+    const normWGaps  = rawWGaps.map(g => g / maxAbsWGap);  // in [-1, +1]
+
+    // Price gap signal: (targetPrice - price) / price, clamped to [-1, +1]
+    // Missing target price → 0 (neutral, not penalised)
+    const normPGaps = pos.map(p => {
+      const pr = parseFloat(p.price), tp = parseFloat(p.targetPrice);
+      if (!tp || !pr || pr<=0 || tp<=0) return 0;
+      return Math.max(-1, Math.min(1, (tp - pr) / pr));
+    });
+
+    // Combined score per position:
+    //   For positions WITH a target price: weighted blend of wGap and pGap
+    //   For positions WITHOUT:             wGap scaled by noTargetMult (user-adjustable)
+    //   noTargetMult < 1 = slight bias toward priced positions (ETF ballast behaviour)
+    //   noTargetMult > 1 = treat unpriced positions as higher conviction
+    const noTargetMult = (parseFloat(state.smartNoTargetMult) || 60) / 100;
+    const hasPriceTarget = pos.map(p => !!(parseFloat(p.targetPrice) && parseFloat(p.price)));
+    const rawScores = pos.map((_,i) => {
+      const wSig = normWGaps[i];
+      if (!hasPriceTarget[i]) return wSig * noTargetMult;
+      const pSig = normPGaps[i];
+      return wSig * (1 - priceWeight) + pSig * priceWeight;
+    });
+
+    // Apply convexity: |score|^convexity, preserve sign — punishes small gaps, rewards large ones
+    const convScores = rawScores.map(s => Math.sign(s) * Math.pow(Math.abs(s), convexity));
+    smartScores = convScores;
+
+    // Convert to allocation weights: scores > 0 get capital (buy), scores ≤ 0 get 0 (or sell)
+    // Positive scores proportionally share the deposit; negatives handled by sell logic below
+    const posScores = convScores.map(s => Math.max(0, s));
+    const posSum = posScores.reduce((a,b)=>a+b, 0);
+    weights = posSum > 0 ? posScores.map(s=>s/posSum) : curW;
+  }
+
+  // Step 3: No sells — simple deposit allocation
+  if (!state.allowSells) {
+    let allocs = weights.map(w => Math.round(deposit * w * 100)/100);
+    // penny correction
+    let diff = Math.round((deposit - allocs.reduce((s,a)=>s+a,0))*100)/100;
+    if (allocs.length && Math.abs(diff) >= 0.01) {
+      let mi = 0;
+      allocs.forEach((a,i)=>{ if(a>allocs[mi]) mi=i; });
+      allocs[mi] = Math.round((allocs[mi]+diff)*100)/100;
+    }
+    return { totalVal, weights, currentWeights, actions: allocs.map(a=>({buy:a>0?a:0, sell:0})), smartScores };
+  }
+
+  // Step 4: Sells enabled — rebalance using deposit + sells
+  const totalResources = totalVal + deposit;
+  let targetWeights = weights;
+
+  if (state.mode === 'target') {
+    const tSum = pos.reduce((s,p)=>s+(parseFloat(p.target)||0), 0);
+    targetWeights = tSum > 0 ? pos.map(p=>(parseFloat(p.target)||0)/tSum) : weights;
+  }
+
+  if (state.mode === 'smart' && smartScores) {
+    // For smart+sells: use combined score directly as the target delta signal
+    // Negative scores → want to sell proportional to score magnitude
+    // Positive scores → want to buy proportional to score magnitude
+    const sellCapBase = (parseFloat(state.sellCap)||25) / 100;
+    const sellCapsS = pos.map((p,i) => {
+      const pr = parseFloat(p.price), tp = parseFloat(p.targetPrice);
+      if (!tp || !pr || pr<=0 || tp<=0) return sellCapBase;
+      const overTarget = (pr - tp) / tp;
+      if (overTarget <= 0) return sellCapBase;
+      const boost = Math.min(overTarget * 2, 1);
+      return Math.min(1, sellCapBase + boost * (1 - sellCapBase));
+    });
+    const maxAbsScore = Math.max(...smartScores.map(Math.abs), 0.0001);
+    const actions = pos.map((p,i) => {
+      const score = smartScores[i];
+      const curVal = vals[i];
+      if (score >= 0) {
+        return { buy: 0, sell: 0, raw: score }; // buys handled after
+      } else {
+        const urgency = Math.abs(score) / maxAbsScore;
+        const sellAmt = Math.round(curVal * sellCapsS[i] * urgency * 100) / 100;
+        return { buy: 0, sell: sellAmt, raw: score };
+      }
+    });
+    const sellProceeds = actions.reduce((s,a)=>s+a.sell, 0);
+    const totalCash = deposit + sellProceeds;
+    // Distribute buy cash proportionally to positive scores
+    const posScores2 = smartScores.map(s=>Math.max(0,s));
+    const posSum2 = posScores2.reduce((a,b)=>a+b, 0);
+    const buyWeights = posSum2 > 0 ? posScores2.map(s=>s/posSum2) : weights;
+    const finalActions = actions.map((a,i) => ({
+      buy:  a.sell > 0 ? 0 : Math.round(totalCash * buyWeights[i] * 100)/100,
+      sell: a.sell,
+      raw:  a.raw
+    }));
+    // penny fix
+    const allocatedBuys2 = finalActions.reduce((s,a)=>s+a.buy,0);
+    let bdiff2 = Math.round((totalCash - allocatedBuys2)*100)/100;
+    if (Math.abs(bdiff2)>=0.01 && finalActions.length) {
+      let mi=0; finalActions.forEach((a,j)=>{if(a.buy>finalActions[mi].buy)mi=j;});
+      if (finalActions[mi].buy>0) finalActions[mi].buy=Math.round((finalActions[mi].buy+bdiff2)*100)/100;
+    }
+    return { totalVal, weights, currentWeights, actions: finalActions, smartScores };
+  }
+
+  // Ideal values after full rebalance
+  const idealVals = targetWeights.map(w => totalResources * w);
+
+  // Per-position sell cap: base cap, boosted if above target price
+  const sellCapBase = (parseFloat(state.sellCap)||25) / 100;
+  const sellCaps = pos.map((p,i) => {
+    const pr = parseFloat(p.price), tp = parseFloat(p.targetPrice);
+    if (!tp || !pr || pr <= 0 || tp <= 0) return sellCapBase;
+    const overTarget = (pr - tp) / tp; // positive = above target
+    if (overTarget <= 0) return sellCapBase; // at or below target, base cap
+    // more aggressive the further above target: scale up to 100% cap
+    const boost = Math.min(overTarget * 2, 1); // linear scale, caps at 1x (doubles)
+    return Math.min(1, sellCapBase + boost * (1 - sellCapBase));
+  });
+
+  const actions = pos.map((p,i) => {
+    const curVal = vals[i];
+    const idealVal = idealVals[i];
+    const delta = idealVal - curVal; // positive = need to buy, negative = need to sell
+    if (delta >= 0) {
+      // needs a buy — but we can't buy more than deposit, handled in redistribution
+      return { buy: delta, sell: 0, raw: delta };
+    } else {
+      // needs a sell — apply cap
+      const maxSell = curVal * sellCaps[i];
+      const sellAmt = Math.min(Math.abs(delta), maxSell);
+      return { buy: 0, sell: Math.round(sellAmt * 100)/100, raw: delta };
+    }
+  });
+
+  // Available cash = deposit + proceeds from sells
+  const sellProceeds = actions.reduce((s,a)=>s+a.sell, 0);
+  const totalCash = deposit + sellProceeds;
+
+  // Scale buys so they don't exceed available cash
+  const rawBuyTotal = actions.reduce((s,a)=>s+a.buy, 0);
+  const buyScale = rawBuyTotal > 0 ? Math.min(1, totalCash / rawBuyTotal) : 0;
+  const finalActions = actions.map(a => ({
+    buy:  Math.round(a.buy  * buyScale * 100)/100,
+    sell: a.sell,
+    raw:  a.raw
+  }));
+
+  // Penny correction on buys
+  const allocatedBuys = finalActions.reduce((s,a)=>s+a.buy, 0);
+  let bdiff = Math.round((totalCash - allocatedBuys)*100)/100;
+  if (Math.abs(bdiff) >= 0.01 && finalActions.length) {
+    let mi = 0;
+    finalActions.forEach((a,i)=>{ if(a.buy>finalActions[mi].buy) mi=i; });
+    if (finalActions[mi].buy > 0)
+      finalActions[mi].buy = Math.round((finalActions[mi].buy + bdiff)*100)/100;
+  }
+
+  return { totalVal, weights, currentWeights, actions: finalActions, smartScores };
+}
+
+// ── UI ─────────────────────────────────────────────────────────────────────
+function renderAccountTabs() {
+  const container = document.getElementById('accountTabs');
+  container.innerHTML = '';
+  Object.keys(state.accounts).forEach(name => {
+    const btn = document.createElement('button');
+    btn.textContent = name;
+    btn.className = name === state.activeAccount ? 'active' : '';
+    btn.addEventListener('click', () => { state.activeAccount = name; saveState(); renderAccountTabs(); render(); });
+    // double-click to rename
+    btn.addEventListener('dblclick', () => {
+      const newName = prompt('Rename account:', name);
+      if (!newName || newName === name) return;
+      if (state.accounts[newName]) { alert('Account name already exists.'); return; }
+      state.accounts[newName] = state.accounts[name];
+      delete state.accounts[name];
+      if (state.activeAccount === name) state.activeAccount = newName;
+      saveState(); renderAccountTabs(); render();
+    });
+    container.appendChild(btn);
+  });
+}
+
+function render() {
+  const tbody = document.getElementById('rows');
+  tbody.innerHTML = '';
+  const pos = positions();
+  const { totalVal, weights, currentWeights, actions, smartScores } = computeAllocations();
+
+  const sellsOn = state.allowSells;
+  const mode = state.mode;
+
+  pos.forEach((p, i) => {
+    const tr = document.createElement('tr');
+    const act = actions[i] || {buy:0, sell:0};
+    const hasBuy = act.buy > 0.005;
+    const hasSell = act.sell > 0.005;
+
+    let actionHtml = '';
+    if (hasSell && hasBuy) {
+      actionHtml = `<span class="sell-val">−${fmt(act.sell)}</span> <span class="buy-val">+${fmt(act.buy)}</span>`;
+    } else if (hasSell) {
+      actionHtml = `<span class="sell-val">Sell ${fmt(act.sell)}</span>`;
+    } else if (hasBuy) {
+      actionHtml = `<span class="buy-val">Buy ${fmt(act.buy)}</span>`;
+    } else {
+      actionHtml = `<span class="zero-val">—</span>`;
+    }
+
+    let priceBadge = '';
+    if ((mode === 'price' || sellsOn) && p.targetPrice && p.price) {
+      const upside = (parseFloat(p.targetPrice) - parseFloat(p.price)) / parseFloat(p.price) * 100;
+      if (Math.abs(upside) >= 0.5) {
+        const cls = upside >= 0 ? 'up' : 'down';
+        priceBadge = `<span class="badge ${cls}">${upside>=0?'+':''}${upside.toFixed(0)}%</span>`;
+      }
+    }
+
+    const targetColDisplay = mode === 'target' ? '' : 'none';
+    const priceColDisplay  = mode === 'price'  ? '' : 'none';
+    const smartColDisplay  = mode === 'smart'  ? '' : 'none';
+
+    // Urgency badge for smart mode
+    let urgencyHtml = '';
+    if (mode === 'smart' && smartScores) {
+      const sc = smartScores[i];
+      const absSc = Math.abs(sc);
+      const maxSc = Math.max(...smartScores.map(Math.abs), 0.0001);
+      const norm = absSc / maxSc; // 0–1
+      const bars = norm < 0.2 ? '▁' : norm < 0.4 ? '▂▂' : norm < 0.6 ? '▃▃▃' : norm < 0.8 ? '▄▄▄▄' : '▅▅▅▅▅';
+      const cls  = sc > 0.05 ? 'up' : sc < -0.05 ? 'down' : '';
+      urgencyHtml = cls
+        ? `<span class="badge ${cls}" style="font-family:monospace; letter-spacing:1px;">${sc>0?'▲':'▼'} ${bars}</span>`
+        : `<span style="color:var(--text-muted); font-size:11px;">—</span>`;
+    }
+
+    tr.innerHTML = `
+      <td><input class="sym" data-idx="${i}" data-field="sym" value="${p.sym}" style="min-width:60px;"></td>
+      <td class="r"><input class="r" data-idx="${i}" data-field="val" type="number" step="0.01" value="${parseFloat(p.val)||0}" style="min-width:80px;"></td>
+      <td class="r" style="color:var(--text-muted); white-space:nowrap;">${pct(currentWeights[i]*100)}</td>
+      <td class="r target-col" style="display:${targetColDisplay};"><input class="r" data-idx="${i}" data-field="target" type="number" step="0.5" value="${p.target!==undefined?p.target:''}" placeholder="0" style="min-width:52px;"></td>
+      <td class="r price-col" style="display:${priceColDisplay};"><input class="r" data-idx="${i}" data-field="price" type="number" step="0.01" value="${p.price!==undefined&&p.price!==''?p.price:''}" placeholder="—" style="min-width:62px;"></td>
+      <td class="r price-col" style="display:${priceColDisplay};">${priceBadge}<input class="r" data-idx="${i}" data-field="targetPrice" type="number" step="0.01" value="${p.targetPrice!==undefined&&p.targetPrice!==''?p.targetPrice:''}" placeholder="optional" style="min-width:68px;"></td>
+      <td class="r smart-col" style="display:${smartColDisplay};"><input class="r" data-idx="${i}" data-field="target" type="number" step="0.5" value="${p.target!==undefined?p.target:''}" placeholder="0" style="min-width:52px;"></td>
+      <td class="r smart-col" style="display:${smartColDisplay};"><input class="r" data-idx="${i}" data-field="price" type="number" step="0.01" value="${p.price!==undefined&&p.price!==''?p.price:''}" placeholder="—" style="min-width:62px;"></td>
+      <td class="r smart-col" style="display:${smartColDisplay};">${priceBadge}<input class="r" data-idx="${i}" data-field="targetPrice" type="number" step="0.01" value="${p.targetPrice!==undefined&&p.targetPrice!==''?p.targetPrice:''}" placeholder="optional" style="min-width:68px;"></td>
+      <td class="r smart-col" style="display:${smartColDisplay}; text-align:right;">${urgencyHtml}</td>
+      <td class="r action-cell">${actionHtml}</td>
+      <td><button class="ghost del-row" data-idx="${i}" aria-label="Remove" title="Remove" style="height:26px; width:26px; font-size:14px; padding:0;">✕</button></td>
+    `;
+    tbody.appendChild(tr);
+  });
+
+  const totalBuy = actions.reduce((s,a)=>s+(a.buy||0),0);
+  const totalSell = actions.reduce((s,a)=>s+(a.sell||0),0);
+  const netCash = (parseFloat(state.deposit)||0);
+
+  document.getElementById('sumTotal').textContent = fmt(totalVal);
+  document.getElementById('sumBuy').textContent   = fmt(totalBuy);
+  document.getElementById('sumSell').textContent  = fmt(totalSell);
+  document.getElementById('sumNet').textContent   = fmt(netCash);
+
+  // Target % total — show in tfoot when in target or smart mode
+  const showTargetTotal = (state.mode === 'target' || state.mode === 'smart');
+  const tfoot = document.getElementById('targetTfoot');
+  tfoot.style.display = showTargetTotal ? '' : 'none';
+  if (showTargetTotal) {
+    const pos2 = positions();
+    const targetSum = pos2.reduce((s,p) => s + (parseFloat(p.target)||0), 0);
+    const rounded = Math.round(targetSum * 10) / 10;
+    const isOff = Math.abs(rounded - 100) >= 0.1;
+    const el = document.getElementById('targetPctTotal');
+    el.textContent = rounded.toFixed(1) + '%';
+    el.style.color = isOff
+      ? (rounded > 100 ? 'var(--danger)' : 'var(--warning)')
+      : 'var(--success)';
+  }
+
+  // Weighted upside row — show in price or smart mode when any position has a target price
+  const pos3 = positions();
+  const hasAnyTargetPrice = pos3.some(p => parseFloat(p.targetPrice) && parseFloat(p.price));
+  const showUpside = (state.mode === 'price' || state.mode === 'smart') && hasAnyTargetPrice;
+  const upsideRow = document.getElementById('upsideTfootRow');
+  upsideRow.style.display = showUpside ? '' : 'none';
+
+  if (showUpside) {
+    // Weighted upside: for each position with a target price, compute
+    // upside% × current portfolio weight. Sum = portfolio-level expected return
+    // if all targets are hit, weighted by your actual exposure.
+    // Positions without a target price contribute 0 (no opinion).
+    let weightedUpside = 0;
+    let coveredWeight = 0;
+    pos3.forEach((p, i) => {
+      const pr = parseFloat(p.price), tp = parseFloat(p.targetPrice);
+      if (!tp || !pr || pr <= 0 || tp <= 0) return;
+      const upside = (tp - pr) / pr;
+      weightedUpside += upside * currentWeights[i];
+      coveredWeight  += currentWeights[i];
+    });
+
+    const wpUp = Math.round(weightedUpside * 1000) / 10; // to 1 decimal
+    const isUp = wpUp >= 0;
+    const label = (isUp ? '+' : '') + wpUp.toFixed(1) + '%';
+    const note  = coveredWeight < 0.999
+      ? ` (${Math.round(coveredWeight*100)}% of portfolio covered)`
+      : '';
+    const color = isUp ? 'var(--success)' : 'var(--danger)';
+
+    const upEl      = document.getElementById('upsideTotal');
+    const upElSmart = document.getElementById('upsideTotalSmart');
+    const html = `<span style="color:${color};">${label}</span><span style="font-size:10px; color:var(--text-muted); font-weight:400;">${note}</span>`;
+    if (upEl)      { upEl.innerHTML      = html; upEl.style.display      = state.mode === 'price' ? '' : 'none'; }
+    if (upElSmart) { upElSmart.innerHTML = html; upElSmart.style.display = state.mode === 'smart' ? '' : 'none'; }
+
+    // Also show tfoot even if target% row isn't showing (price mode)
+    if (!showTargetTotal) tfoot.style.display = '';
+  } else {
+    if (!showTargetTotal) tfoot.style.display = 'none';
+  }
+
+  // wire inputs
+  tbody.querySelectorAll('input').forEach(inp => {
+    inp.addEventListener('input', e => {
+      const idx = parseInt(e.target.dataset.idx);
+      const field = e.target.dataset.field;
+      let v = e.target.value;
+      if (field === 'sym') v = v.toUpperCase();
+      positions()[idx][field] = v;
+      saveState(); render();
+    });
+  });
+  tbody.querySelectorAll('.del-row').forEach(btn => {
+    btn.addEventListener('click', e => {
+      const idx = parseInt(e.currentTarget.dataset.idx);
+      positions().splice(idx, 1);
+      saveState(); render();
+    });
+  });
+}
+
+function setMode(mode) {
+  state.mode = mode;
+  document.querySelectorAll('#modeTabs button').forEach(b => b.classList.toggle('active', b.dataset.mode===mode));
+  document.getElementById('tiltSection').style.display    = (mode==='target' && !state.allowSells) ? 'block' : 'none';
+  document.getElementById('priceSection').style.display   = mode==='price'  ? 'block' : 'none';
+  document.getElementById('smartSection').style.display   = mode==='smart'  ? 'block' : 'none';
+  document.querySelectorAll('.target-col').forEach(el => el.style.display = mode==='target' ? '' : 'none');
+  document.querySelectorAll('.price-col').forEach(el  => el.style.display = mode==='price'  ? '' : 'none');
+  document.querySelectorAll('.smart-col').forEach(el  => el.style.display = mode==='smart'  ? '' : 'none');
+  saveState(); render();
+}
+
+function updateSellUI() {
+  const on = state.allowSells;
+  document.getElementById('sellControls').style.display = on ? 'block' : 'none';
+  // hide tilt when sells are on in target mode (tilt is irrelevant — we go full target)
+  document.getElementById('tiltSection').style.display = (state.mode==='target' && !on) ? 'block' : 'none';
+}
+
+// ── Events ─────────────────────────────────────────────────────────────────
+document.getElementById('deposit').addEventListener('input', e => {
+  state.deposit = e.target.value; saveState(); render();
+});
+
+document.querySelectorAll('#modeTabs button').forEach(b => {
+  b.addEventListener('click', () => setMode(b.dataset.mode));
+});
+
+document.getElementById('tilt').addEventListener('input', e => {
+  state.tilt = e.target.value;
+  document.getElementById('tiltVal').textContent = e.target.value + '%';
+  saveState(); render();
+});
+
+document.getElementById('priceStrength').addEventListener('input', e => {
+  state.priceStrength = e.target.value;
+  document.getElementById('priceStrengthVal').textContent = e.target.value + '%';
+  saveState(); render();
+});
+
+document.getElementById('smartPriceWeight').addEventListener('input', e => {
+  state.smartPriceWeight = e.target.value;
+  document.getElementById('smartPriceWeightVal').textContent = e.target.value + '%';
+  saveState(); render();
+});
+
+document.getElementById('smartConvexity').addEventListener('input', e => {
+  state.smartConvexity = e.target.value;
+  document.getElementById('smartConvexityVal').textContent = e.target.value + '×';
+  saveState(); render();
+});
+
+document.getElementById('smartNoTargetMult').addEventListener('input', e => {
+  state.smartNoTargetMult = e.target.value;
+  document.getElementById('smartNoTargetMultVal').textContent = (e.target.value / 100).toFixed(2) + '×';
+  saveState(); render();
+});
+
+document.getElementById('allowSells').addEventListener('change', e => {
+  state.allowSells = e.target.checked;
+  updateSellUI(); saveState(); render();
+});
+
+document.getElementById('sellCap').addEventListener('input', e => {
+  state.sellCap = e.target.value;
+  document.getElementById('sellCapVal').textContent = e.target.value + '%';
+  saveState(); render();
+});
+
+document.getElementById('addRow').addEventListener('click', () => {
+  positions().push({sym:'NEW', val:0, target:0, price:'', targetPrice:''});
+  saveState(); render();
+});
+
+document.getElementById('addAccount').addEventListener('click', () => {
+  const name = prompt('New account name (e.g. "Brokerage"):');
+  if (!name) return;
+  if (state.accounts[name]) { alert('Account already exists.'); return; }
+  state.accounts[name] = [];
+  state.activeAccount = name;
+  saveState(); renderAccountTabs(); render();
+});
+
+document.getElementById('resetData').addEventListener('click', () => {
+  if (confirm('Reset all accounts to sample data?')) {
+    state.accounts = JSON.parse(JSON.stringify(SAMPLE.accounts));
+    state.activeAccount = 'Roth IRA';
+    saveState(); renderAccountTabs(); render();
+  }
+});
+
+document.getElementById('copyList').addEventListener('click', () => {
+  const pos = positions();
+  const { actions } = computeAllocations();
+  const lines = pos.map((p,i) => {
+    const a = actions[i]||{buy:0,sell:0};
+    if (a.sell > 0.005) return `SELL  ${p.sym.padEnd(7)} ${fmt(a.sell)}`;
+    if (a.buy  > 0.005) return `BUY   ${p.sym.padEnd(7)} ${fmt(a.buy)}`;
+    return null;
+  }).filter(Boolean);
+  const text = lines.join('\n');
+  const el = document.getElementById('copyListEl');
+  el.textContent = text || '(nothing to do)';
+  el.style.display = el.style.display === 'block' ? 'none' : 'block';
+  if (el.style.display === 'block' && text) {
+    navigator.clipboard.writeText(text).catch(()=>{});
+  }
+});
+
+// ── CSV import ──────────────────────────────────────────────────────────────
+document.getElementById('importBtn').addEventListener('click', () => document.getElementById('csvFile').click());
+
+document.getElementById('csvFile').addEventListener('change', e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = evt => {
+    try {
+      const text = evt.target.result;
+      const lines = text.split(/\r?\n/).filter(l=>l.trim());
+      const hi = lines.findIndex(l=>l.toLowerCase().includes('symbol')&&l.toLowerCase().includes('current value'));
+      if (hi===-1) { alert('No header row with Symbol + Current Value found.'); return; }
+      const headers = parseCSV(lines[hi]).map(h=>h.trim().toLowerCase());
+      const si=headers.indexOf('symbol'), vi=headers.indexOf('current value'),
+            pi=headers.indexOf('last price'), ai=headers.indexOf('account name');
+      if (si===-1||vi===-1) { alert('CSV missing Symbol or Current Value column.'); return; }
+
+      const byAccount = {};
+      for (let i=hi+1;i<lines.length;i++) {
+        const cols = parseCSV(lines[i]);
+        if (cols.length <= Math.max(si,vi)) continue;
+        const sym = cols[si].trim();
+        const val = parseFloat((cols[vi]||'').replace(/[$,]/g,''));
+        if (!sym||sym.toLowerCase().includes('pending')||sym.includes('**')||isNaN(val)) continue;
+        const acct = ai!==-1 ? (cols[ai]||'').trim() : state.activeAccount;
+        const price = pi!==-1 ? parseFloat((cols[pi]||'').replace(/[$,]/g,''))||'' : '';
+        if (!byAccount[acct]) byAccount[acct]=[];
+        byAccount[acct].push({sym, val, price});
+      }
+
+      if (!Object.keys(byAccount).length) { alert('No positions found.'); return; }
+
+      let totalImported = 0;
+      Object.entries(byAccount).forEach(([acct, rows]) => {
+        const existing = state.accounts[acct] || [];
+        state.accounts[acct] = rows.map(r => {
+          const ex = existing.find(p=>p.sym===r.sym);
+          return { sym:r.sym, val:r.val, price:r.price,
+                   target: ex ? ex.target : 0,
+                   targetPrice: ex ? ex.targetPrice : '' };
+        });
+        totalImported += rows.length;
+      });
+
+      // switch to first imported account
+      state.activeAccount = Object.keys(byAccount)[0];
+      saveState(); renderAccountTabs(); render();
+      alert(`Imported ${totalImported} position(s) across ${Object.keys(byAccount).length} account(s).`);
+    } catch(err) { alert('Could not parse CSV.'); console.error(err); }
+  };
+  reader.readAsText(file);
+  e.target.value = '';
+});
+
+function parseCSV(line) {
+  const out=[]; let cur='', q=false;
+  for (const ch of line) {
+    if (ch==='"') q=!q;
+    else if (ch===','&&!q) { out.push(cur); cur=''; }
+    else cur+=ch;
+  }
+  out.push(cur);
+  return out;
+}
+
+// ── Init ────────────────────────────────────────────────────────────────────
+loadState();
+document.getElementById('deposit').value        = state.deposit;
+document.getElementById('tilt').value           = state.tilt;
+document.getElementById('tiltVal').textContent  = state.tilt + '%';
+document.getElementById('priceStrength').value          = state.priceStrength;
+document.getElementById('priceStrengthVal').textContent = state.priceStrength + '%';
+document.getElementById('smartPriceWeight').value           = state.smartPriceWeight || 50;
+document.getElementById('smartPriceWeightVal').textContent  = (state.smartPriceWeight || 50) + '%';
+document.getElementById('smartConvexity').value             = state.smartConvexity || 2;
+document.getElementById('smartConvexityVal').textContent    = (state.smartConvexity || 2) + '×';
+document.getElementById('smartNoTargetMult').value              = state.smartNoTargetMult || 60;
+document.getElementById('smartNoTargetMultVal').textContent     = ((state.smartNoTargetMult || 60) / 100).toFixed(2) + '×';
+document.getElementById('allowSells').checked   = state.allowSells;
+document.getElementById('sellCap').value        = state.sellCap;
+document.getElementById('sellCapVal').textContent = state.sellCap + '%';
+renderAccountTabs();
+setMode(state.mode || 'current');
+updateSellUI();
+</script>
+</body>
+</html>
